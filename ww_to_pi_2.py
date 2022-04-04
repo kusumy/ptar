@@ -122,10 +122,12 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
             
             if (len(df) > 0):
                 # Get values
-                values = df['Value'].values.tolist()
+                #values = df['Value'].values.tolist()
+                values = df['Value']
 
                 # Get timestamp
-                timestamps = df['DateTime'].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
+                #timestamps = df['DateTime'].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
+                timestamps = df['DateTime']
 
                 # Write data to PI tag
                 logging.info("Insert data to PI Data Archive {} ...".format(tagname))
@@ -153,10 +155,11 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
 
     t1_total = time.time()
     total_execution_time = format_timespan(t1_total - t0_total, True, max_units=4)
-    logging.info("Execution time: {}".format(total_execution_time))                    
+    logging.info("Total Execution time: {}".format(total_execution_time))                    
 
 
 # Create data frame list of error
 df_error = pd.DataFrame(list_error_tag)
 # Export list of error as csv
-df_error.to_csv("list_of_error_tagname.csv")
+if (len(df_error) > 0) :
+    df_error.to_csv("list_of_error_tagname.csv")

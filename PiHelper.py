@@ -136,7 +136,8 @@ class PiHelper:
         local_zone = tz.tzlocal()
 
         # Convert time string to datetime
-        local_time = datetime.datetime.strptime(datestamp, '%Y-%m-%d %H:%M:%S')
+        #local_time = datetime.datetime.strptime(datestamp, '%Y-%m-%d %H:%M:%S')
+        local_time = datestamp
 
         # Tell the datetime object that it's in local time zone since 
         # datetime objects are 'naive' by default
