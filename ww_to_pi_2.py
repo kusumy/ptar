@@ -15,6 +15,7 @@ import pandas as pd
 import pyodbc
 import time
 import warnings
+import os
 
 warnings.filterwarnings('ignore')
 
@@ -122,14 +123,24 @@ df_date = df_date.drop(columns=['index'])
 # %%
 list_error_tag = []
 
+# Create directory to store logging, based on startdate
+dirName = "migration_logs"
+
+# Create target Directory if don't exist
+if not os.path.exists(dirName):
+    os.mkdir(dirName)
+
 # Iterate through tagname rows
 for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc='Tagname'):
-    if index_tag < 6:
-        continue
+    #if index_tag < 6:
+    #    continue
     tagname = row_tag['Name']
     af_path = row_tag['AFPath']
     t0_total = time.time()
-    logging.basicConfig(force=True, filename=tagname+'.log', filemode='a', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+
+    filename = dirName+"/"+ tagname+'.log'
+    logging.basicConfig(force=True, filename=filename, filemode='w', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+
     for index, row in tqdm(df_date.iterrows(), total=df_date.shape[0], desc='DateTime'):
         # Create start date, and end date for data training
         startdate = row['start_date']
@@ -164,7 +175,7 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
             df['DateTime'] = pd.to_datetime(df['DateTime'])
             t1 = time.time()
             
-            execution_time = format_timespan(t1 - t0, True, max_units=4)
+            execution_time = format_timespan(t1 - t0, True, max_units=3)
             logging.info("Execution time: {}".format(execution_time))
 
             # Length of database record
@@ -185,7 +196,7 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
 
                 response = piHelper.insertTimeSeriesValues(af_path, values, timestamps)
                 t1 = time.time()
-                execution_time = format_timespan(t1 - t0, True, max_units=4)
+                execution_time = format_timespan(t1 - t0, True, max_units=3)
                 logging.info("Execution time: {}".format(execution_time))
 
                 # Log response
@@ -197,15 +208,16 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
                         
         except Exception as exception:
             str_expt = str(exception)
-            # Create dictionary consist of tag, start_date, end_date which has an error
-            dict_error = {"tagname":tagname, "start_date":startdate, "end_date":enddate, "error_msg":str_expt}
+            # Create dictionary consist of tag, start_date, end_date, and created_date which has an error
+            current_time = arrow.now().strftime("%Y-%m-%d %H:%M:%S")
+            dict_error = {"tagname":tagname, "start_date":startdate, "end_date":enddate, "created_date":current_time, "error_msg":str_expt}
             # Add to list of error
             list_error_tag.append(dict_error)
             logging.error("Error for {} at {} to {}".format(tagname,startdate,enddate))
             logging.error(str_expt, exc_info=True) 
 
     t1_total = time.time()
-    total_execution_time = format_timespan(t1_total - t0_total, True, max_units=4)
+    total_execution_time = format_timespan(t1_total - t0_total, True, max_units=3)
     logging.info("Total Execution time: {}".format(total_execution_time))                    
 
 
@@ -213,4 +225,4 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
 df_error = pd.DataFrame(list_error_tag)
 # Export list of error as csv
 if (len(df_error) > 0) :
-    df_error.to_csv("list_of_error_tagname.csv")
+    df_error.to_csv(dirName + "/list_of_error_tagname.csv")
