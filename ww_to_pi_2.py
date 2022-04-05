@@ -32,7 +32,7 @@ cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';
 cursor = cnxn.cursor()
 
 # %%
-piwebapi_url = 'https://192.168.5.76/piwebapi'
+piwebapi_url = 'https://192.168.5.74/piwebapi'
 client = PIWebApiClient(piwebapi_url, useKerberos=False, username="administrator", password="Spc12345", verifySsl=False) 
 piHelper = PiHelper(client)
 
@@ -43,6 +43,7 @@ df_conf = pd.read_csv('AF_PTAR.csv')
 # Filter model configuration based on object type
 object_type = "ObjectType=='Attribute'"
 df_conf = df_conf.query(object_type)
+df_conf = df_conf.reset_index(drop=True)
 
 # %%
 # Create start date and end date table for datestamp selection
@@ -76,6 +77,8 @@ list_error_tag = []
 
 # Iterate through tagname rows
 for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc='Tagname'):
+    if index_tag < 6:
+        continue
     tagname = row_tag['Name']
     af_path = row_tag['AFPath']
     t0_total = time.time()
@@ -121,6 +124,10 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
             logging.info("Row count = {}".format(len(df)))
             
             if (len(df) > 0):
+                # Write data to PI tag
+                logging.info("Insert data to PI Data Archive {} ...".format(tagname))
+
+                t0 = time.time()
                 # Get values
                 #values = df['Value'].values.tolist()
                 values = df['Value']
@@ -129,9 +136,6 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
                 #timestamps = df['DateTime'].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
                 timestamps = df['DateTime']
 
-                # Write data to PI tag
-                logging.info("Insert data to PI Data Archive {} ...".format(tagname))
-                t0 = time.time()
                 response = piHelper.insertTimeSeriesValues(af_path, values, timestamps)
                 t1 = time.time()
                 execution_time = format_timespan(t1 - t0, True, max_units=4)

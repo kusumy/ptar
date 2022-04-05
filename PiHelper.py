@@ -13,7 +13,6 @@ class PiHelper:
         self.pi_client = pi_client
     
 
-    
     def character_indexes(self, string, match):
         #string = "Hello World! This is an example sentence with no meaning."
         #match = "i"
@@ -112,14 +111,14 @@ class PiHelper:
         streamValues = PIStreamValues()
         pi_values = list()
 
-        for i, val in enumerate(values):
-            pi_val = PITimedValue()
-            pi_val.value, pi_val.timestamp, pi_val.good = val, self.convertToUTC(timestamps[i]), True
-            #pi_val.timestamp = self.convertToUTC(timestamps[i])
-            #pi_val.good = True
-            pi_values.append(pi_val)
+        # for i, val in enumerate(values):
+        #     pi_val = PITimedValue()
+        #     pi_val.value, pi_val.timestamp, pi_val.good = val, self.convertToUTC(timestamps[i]), True
+        #     #pi_val.timestamp = self.convertToUTC(timestamps[i])
+        #     #pi_val.good = True
+        #     pi_values.append(pi_val)
         
-        #pi_values = []
+        pi_values = list(map(self.createPITimedValueObject, values, timestamps))
 
         streamValues.web_id = web_id
         streamValues.items = pi_values
@@ -128,6 +127,13 @@ class PiHelper:
         response = self.pi_client.streamSet.update_values_ad_hoc_with_http_info(listStreamValues, update_option=update_option)
 
         return response
+
+    # This function create PITimedValue object from pair of value and its datestamp
+    def createPITimedValueObject(self, val, datestamp):
+        pi_val = PITimedValue()
+        pi_val.value, pi_val.timestamp, pi_val.good = val, self.convertToUTC(datestamp), True
+
+        return pi_val
 
     def convertToUTC(self, datestamp):
     
