@@ -9,13 +9,14 @@ end_date       = End date of learning data (format: YYYY-MM-DD HH:mm:ss) """
 # %%
 import arrow
 import argparse            # Construct the argument parser
+import json
 import logging
 import numpy as np
+import os
 import pandas as pd
 import pyodbc
 import time
 import warnings
-import os
 
 warnings.filterwarnings('ignore')
 
@@ -35,18 +36,20 @@ from PiHelper import *
 ap = argparse.ArgumentParser()
 ap.add_argument("-c", "--conf", required=True, help="Configuration file (JSON format)")
 ap.add_argument("-s", "--startdate", required=True, help="Start date data")
-ap.add_argument("-e", "--enddate", required=True, help="End date")
+ap.add_argument("-e", "--enddate", required=True, help="End date data")
+ap.add_argument("-d", "--days", required=True, help="Split start and end date into x days range")
 
 args = vars(ap.parse_args())
 fileConf  = str(args['conf'])
 startDate = str(args['startdate'])
 endDate = str(args['enddate'])
+days = int(args['days'])
 
 # %%
 ###################################################################################
 ## Open and read configuration file
 ###################################################################################
-import json
+
 
 # Opening JSON file
 print("Reading config file ...")
@@ -103,14 +106,14 @@ end_list = []
 for r in arrow.Arrow.span_range('days', start, end):
     sdate = r[0].floor('day').format('YYYYMMDD HH:mm:ss')
     start_list.append(sdate)
-    edate = r[1].floor('second').shift(days=+6).format('YYYYMMDD HH:mm:ss')
+    edate = r[1].floor('second').shift(days=+(days-1)).format('YYYYMMDD HH:mm:ss')
     end_list.append(edate)
 
 df_date = pd.DataFrame(list(zip(start_list, end_list)), columns =['start_date', 'end_date'])
 #df_date['start_date'] = pd.to_datetime(df_date['start_date'])
 #df_date['end_date'] = pd.to_datetime(df_date['end_date'])
 
-l = list(np.arange(0,len(df_date),7))
+l = list(np.arange(0,len(df_date),days))
 df_date = df_date.iloc[l].sort_values('start_date',ascending=False).reset_index()
 df_date = df_date.drop(columns=['index'])
 
@@ -131,7 +134,7 @@ if not os.path.exists(dirName):
     os.mkdir(dirName)
 
 # Iterate through tagname rows
-for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc='Tagname'):
+for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc='Processing Tagnames ..'):
     #if index_tag < 6:
     #    continue
     tagname = row_tag['Name']
@@ -141,7 +144,7 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
     filename = dirName+"/"+ tagname+'.log'
     logging.basicConfig(force=True, filename=filename, filemode='w', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-    for index, row in tqdm(df_date.iterrows(), total=df_date.shape[0], desc='DateTime'):
+    for index, row in tqdm(df_date.iterrows(), total=df_date.shape[0], desc='Processing DateTimes ..'):
         # Create start date, and end date for data training
         startdate = row['start_date']
         enddate = row['end_date']
