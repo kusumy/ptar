@@ -1,3 +1,10 @@
+"""     python ww_to_pi.py --conf=[json_conf_file] --startdate=[start_date] --enddate=[start_date] 
+
+Where:
+
+json_conf_file = JSON Configuration File (complete path)
+start_date     = Start date of learning data (format: YYYY-MM-DD HH:mm:ss)
+end_date       = End date of learning data (format: YYYY-MM-DD HH:mm:ss) """
 
 # %%
 import arrow
@@ -23,17 +30,54 @@ from osisoft.pidevclub.piwebapi.models import PIStreamValues, PITimedValue
 from PiHelper import *
 
 # %%
-server = '192.168.5.191'
-database = 'Runtime'
-username = 'pi'
-password = '1m4dm1n'
+# Add the arguments to the parser
+ap = argparse.ArgumentParser()
+ap.add_argument("-c", "--conf", required=True, help="Configuration file (JSON format)")
+ap.add_argument("-s", "--startdate", required=True, help="Start date data")
+ap.add_argument("-e", "--enddate", required=True, help="End date")
+
+args = vars(ap.parse_args())
+fileConf  = str(args['conf'])
+startDate = str(args['startdate'])
+endDate = str(args['enddate'])
+
+# %%
+###################################################################################
+## Open and read configuration file
+###################################################################################
+import json
+
+# Opening JSON file
+print("Reading config file ...")
+
+with open(fileConf, 'r') as f:
+    # returns JSON object as  a dictionary 
+    conf = json.load(f) 
+
+server = conf['server_ww']
+database = conf['database_ww']
+username = conf['username_ww']
+password = conf['password_ww']
+
+piwebapi_url = conf['piwebapi_url']
+piwebapi_username = conf['piwebapi_username']
+piwebapi_password = conf['piwebapi_password']
+
+
+# %%
+#server = '192.168.5.191'
+#database = 'Runtime'
+#username = 'pi'
+#password = '1m4dm1n'
 cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
 #cnxn = pyodbc.connect('DRIVER={SQL Server}; SERVER='+server+'; DATABASE='+database+'; UID='+username+'; PWD='+ password)
 cursor = cnxn.cursor()
 
 # %%
-piwebapi_url = 'https://192.168.5.74/piwebapi'
-client = PIWebApiClient(piwebapi_url, useKerberos=False, username="administrator", password="Spc12345", verifySsl=False) 
+#piwebapi_url = 'https://192.168.5.74/piwebapi'
+#client = PIWebApiClient(piwebapi_url, useKerberos=False, username="administrator", password="Spc12345", verifySsl=False) 
+client = PIWebApiClient(piwebapi_url, useKerberos=False, username=piwebapi_username, password=piwebapi_password, verifySsl=False) 
+
 piHelper = PiHelper(client)
 
 # %%
@@ -47,8 +91,11 @@ df_conf = df_conf.reset_index(drop=True)
 
 # %%
 # Create start date and end date table for datestamp selection
-start = arrow.get("20220101 00:00:00")
-end = arrow.get("20220315 23:59:59")
+#start = arrow.get("20220101 00:00:00")
+#end = arrow.get("20220315 23:59:59")
+
+start = arrow.get(startDate)
+end = arrow.get(endDate)
 start_list = []
 end_list = []
 
