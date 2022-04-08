@@ -86,11 +86,11 @@ piHelper = PiHelper(client)
 
 # %%
 # Read model configuration file
-df_conf = pd.read_csv('AF_PTAR.csv')
+df_conf = pd.read_csv('agincourt_recources.csv')
 
 # Filter model configuration based on object type
-object_type = "ObjectType=='Attribute'"
-df_conf = df_conf.query(object_type)
+#object_type = "ObjectType=='Attribute'"
+#df_conf = df_conf.query(object_type)
 df_conf = df_conf.reset_index(drop=True)
 
 # %%
@@ -160,7 +160,7 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
         SELECT DateTime, Value \
             FROM History \
             WHERE History.TagName = '{}' \
-            AND wwRetrievalMode = 'Cyclic' \
+            AND wwRetrievalMode = 'Delta' \
             AND wwResolution = 1000 \
             AND wwQualityRule = 'Extended' \
             AND Quality = 0 \
