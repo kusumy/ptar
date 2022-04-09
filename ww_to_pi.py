@@ -179,7 +179,7 @@ with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green
                     AND DateTime <= @EndDate) temp ".format(startdate, enddate, tagname)
                 try:
                      # Put start time  to progress bar
-                    t_datetime.set_description('Datetime:  ' + startdate + ' to ' + enddate)
+                    t_datetime.set_description('Datetime:  ' + arrow.get(startdate).format('YYYYMMDD') + ' to ' + arrow.get(enddate).format('YYYYMMDD'))
 
                     # Get data from WW Historian
                     logging.info("Reading data {} from WW Historian ...;".format(tagname))
