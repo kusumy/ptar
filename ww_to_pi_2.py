@@ -49,8 +49,6 @@ days = int(args['days'])
 ###################################################################################
 ## Open and read configuration file
 ###################################################################################
-
-
 # Opening JSON file
 print("Reading config file ...")
 
@@ -86,7 +84,7 @@ piHelper = PiHelper(client)
 
 # %%
 # Read model configuration file
-df_conf = pd.read_csv('agincourt_recources.csv')
+df_conf = pd.read_csv('agincourt_resources.csv')
 
 # Filter model configuration based on object type
 #object_type = "ObjectType=='Attribute'"
@@ -125,6 +123,7 @@ df_date = df_date.drop(columns=['index'])
 #enddate = df_date['end_date'][0] # "20220315 23:59:59"
 # %%
 list_error_tag = []
+list_success_tag = []
 
 # Create directory to store logging, based on startdate
 dirName = "migration_logs"
@@ -177,14 +176,20 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
             df = pd.read_sql(sql, cnxn)
             df['DateTime'] = pd.to_datetime(df['DateTime'])
             t1 = time.time()
-            
-            execution_time = format_timespan(t1 - t0, True, max_units=3)
-            logging.info("Execution time: {}".format(execution_time))
+            ww_query_time = t1-t0
+
+            ww_execution_time = format_timespan(ww_query_time, True, max_units=2)
+            logging.info("Execution time: {}".format(ww_execution_time))
 
             # Length of database record
-            logging.info("Row count = {}".format(len(df)))
+            row_count = len(df)
+            logging.info("Row count = {}".format(row_count))
             
-            if (len(df) > 0):
+            # Init value
+            pi_insert_time = 0
+            str_response = ""
+
+            if (row_count > 0):
                 # Write data to PI tag
                 logging.info("Insert data to PI Data Archive {} ...".format(tagname))
 
@@ -198,16 +203,25 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
                 timestamps = df['DateTime']
 
                 response = piHelper.insertTimeSeriesValues(af_path, values, timestamps)
+                str_response = str(response)
                 t1 = time.time()
-                execution_time = format_timespan(t1 - t0, True, max_units=3)
-                logging.info("Execution time: {}".format(execution_time))
+                pi_insert_time = t1-t0
+
+                pi_execution_time = format_timespan(pi_insert_time, True, max_units=2)
+                logging.info("Execution time: {}".format(pi_execution_time))
 
                 # Log response
-                logging.info(str(response))
+                logging.info(str_response)
             else:
                 logging.warning("No data for {} at {} to {}".format(tagname,startdate,enddate))
             
             logging.info("")
+
+            current_time = arrow.now().strftime("%Y-%m-%d %H:%M:%S")
+            dict_success = {"tagname":tagname, "start_date":startdate, "end_date":enddate, "created_date":current_time, \
+                            "ww_query_time":ww_query_time, "ww_query_time_str":ww_execution_time, "ww_query_record":row_count, \
+                            "pi_insert_time":pi_insert_time, "pi_insert_time_str":pi_execution_time, "response":str_response}
+            list_success_tag.append(dict_success)
                         
         except Exception as exception:
             str_expt = str(exception)
@@ -223,6 +237,9 @@ for index_tag, row_tag in tqdm(df_conf.iterrows(), total=df_conf.shape[0], desc=
     total_execution_time = format_timespan(t1_total - t0_total, True, max_units=3)
     logging.info("Total Execution time: {}".format(total_execution_time))                    
 
+# Create data frame list of tag success
+df_success = pd.DataFrame(list_success_tag)
+df_success.to_csv(dirName+"/list_success_tag.csv")
 
 # Create data frame list of error
 df_error = pd.DataFrame(list_error_tag)
