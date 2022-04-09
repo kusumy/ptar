@@ -152,7 +152,8 @@ with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green
         filename = dirName+"/"+ tagname+'.log'
         logging.basicConfig(force=True, filename=filename, filemode='w', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-        with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow', token=telegram_bot_token, chat_id=telegram_chat_id) as t_datetime:
+        #with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow', token=telegram_bot_token, chat_id=telegram_chat_id) as t_datetime:
+        with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow') as t_datetime:
             for index, row in t_datetime:
                 # Create start date, and end date for data training
                 startdate = row['start_date']
@@ -191,7 +192,7 @@ with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green
                     t1 = time.time()
                     ww_query_time = t1-t0
 
-                    ww_execution_time = format_timespan(ww_query_time, True, max_units=2)
+                    ww_execution_time = format_timespan(ww_query_time, True)
                     logging.info("Execution time: {}".format(ww_execution_time))
 
                     # Length of database record
@@ -220,7 +221,7 @@ with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green
                         t1 = time.time()
                         pi_insert_time = t1-t0
 
-                        pi_execution_time = format_timespan(pi_insert_time, True, max_units=2)
+                        pi_execution_time = format_timespan(pi_insert_time, True)
                         logging.info("Execution time: {}".format(pi_execution_time))
 
                         # Log response
