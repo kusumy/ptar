@@ -23,7 +23,7 @@ warnings.filterwarnings('ignore')
 from datetime import datetime
 from humanfriendly import format_timespan
 from sqlalchemy import create_engine
-from tqdm import tqdm
+from tqdm.contrib.telegram import tqdm, trange
 
 # %%
 from osisoft.pidevclub.piwebapi.pi_web_api_client import PIWebApiClient
@@ -101,20 +101,15 @@ end = arrow.get(endDate)
 start_list = []
 end_list = []
 
-for r in arrow.Arrow.span_range('days', start, end):
-    sdate = r[0].floor('day').format('YYYYMMDD HH:mm:ss')
-    start_list.append(sdate)
-    edate = r[1].floor('second').shift(days=+(days-1)).format('YYYYMMDD HH:mm:ss')
-    end_list.append(edate)
+for r in arrow.Arrow.interval('days', start, end, interval=days):
+    start_list.append(r[0].format('YYYYMMDD HH:mm:ss'))
+    end_list.append(r[1].format('YYYYMMDD HH:mm:ss'))
 
 df_date = pd.DataFrame(list(zip(start_list, end_list)), columns =['start_date', 'end_date'])
 #df_date['start_date'] = pd.to_datetime(df_date['start_date'])
 #df_date['end_date'] = pd.to_datetime(df_date['end_date'])
 
-l = list(np.arange(0,len(df_date),days))
-df_date = df_date.iloc[l].sort_values('start_date',ascending=False).reset_index()
-df_date = df_date.drop(columns=['index'])
-
+df_date = df_date.sort_values('start_date',ascending=False).reset_index().drop(columns=['index'])
 # %%
 # For test
 #tagname = df_conf['Name'][2]            # tag_path = '\\\\PISERVER\\Database1\\PCS0210PN001_Crushing|MAR.M0210_FE001_MI_sPV'
@@ -137,8 +132,12 @@ processed_tag_path = dirName+"/list_success_tag.csv"
 if os.path.exists(processed_tag_path):
     os.remove(processed_tag_path)
 
+# Send tqdm progress update to telegram
+telegram_bot_token = '5287136655:AAEj6qGOblO7MmyqQ9G72XJnHXM7b3gYNTs'
+telegram_chat_id = '30724671'
+
 # Iterate through tagname rows
-with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green') as t_tag:
+with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green', token=telegram_bot_token, chat_id=telegram_chat_id) as t_tag:
     for index_tag, row_tag in t_tag:
 
         tagname = row_tag['Name']
@@ -153,7 +152,7 @@ with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green
         filename = dirName+"/"+ tagname+'.log'
         logging.basicConfig(force=True, filename=filename, filemode='w', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
-        with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow') as t_datetime:
+        with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow', token=telegram_bot_token, chat_id=telegram_chat_id) as t_datetime:
             for index, row in t_datetime:
                 # Create start date, and end date for data training
                 startdate = row['start_date']
