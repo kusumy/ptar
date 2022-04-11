@@ -15,7 +15,11 @@ import numpy as np
 import os
 import pandas as pd
 import pyodbc
+import requests
+import tqdm.contrib.telegram as tqdm_telegram
+import tqdm as tqdm
 import time
+import urllib
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -23,13 +27,40 @@ warnings.filterwarnings('ignore')
 from datetime import datetime
 from humanfriendly import format_timespan
 from sqlalchemy import create_engine
-from tqdm.contrib.telegram import tqdm, trange
+
 
 # %%
 from osisoft.pidevclub.piwebapi.pi_web_api_client import PIWebApiClient
 from osisoft.pidevclub.piwebapi.models import PIStreamValues, PITimedValue
 
 from PiHelper import *
+
+# %%
+
+# Function and variables to send message to telegram bot
+# Send tqdm progress update to telegram
+telegram_bot_token = '5287136655:AAEj6qGOblO7MmyqQ9G72XJnHXM7b3gYNTs'
+telegram_chat_id = '30724671'
+
+URL = "https://api.telegram.org/bot{}/".format(telegram_bot_token)
+
+def get_url(url):
+   response = requests.get(url)
+   content = response.content.decode("utf8")
+   return content
+
+def send_message(text, chat_id):
+   tot = urllib.parse.quote_plus(text)
+   url = URL + "sendMessage?text={}&chat_id={}".format(tot, chat_id)
+   get_url(url)
+
+def send_document(doc, chat_id):
+    files = {'document': open(doc, 'rb')}
+    requests.post(URL + "sendDocument?chat_id={}".format(chat_id), files=files)
+
+def send_image(doc, chat_id):
+    files = {'photo': open(doc, 'rb')}
+    requests.post(URL + "sendPhoto?chat_id={}".format(chat_id), files=files)
 
 # %%
 # Add the arguments to the parser
@@ -46,6 +77,7 @@ endDate = str(args['enddate'])
 days = int(args['days'])
 
 # %%
+
 ###################################################################################
 ## Open and read configuration file
 ###################################################################################
@@ -79,7 +111,6 @@ cursor = cnxn.cursor()
 #piwebapi_url = 'https://192.168.5.74/piwebapi'
 #client = PIWebApiClient(piwebapi_url, useKerberos=False, username="administrator", password="Spc12345", verifySsl=False) 
 client = PIWebApiClient(piwebapi_url, useKerberos=False, username=piwebapi_username, password=piwebapi_password, verifySsl=False) 
-
 piHelper = PiHelper(client)
 
 # %%
@@ -110,6 +141,7 @@ df_date = pd.DataFrame(list(zip(start_list, end_list)), columns =['start_date', 
 #df_date['end_date'] = pd.to_datetime(df_date['end_date'])
 
 df_date = df_date.sort_values('start_date',ascending=False).reset_index().drop(columns=['index'])
+
 # %%
 # For test
 #tagname = df_conf['Name'][2]            # tag_path = '\\\\PISERVER\\Database1\\PCS0210PN001_Crushing|MAR.M0210_FE001_MI_sPV'
@@ -117,6 +149,11 @@ df_date = df_date.sort_values('start_date',ascending=False).reset_index().drop(c
 #startdate = df_date['start_date'][0] #"20220330 00:00:00"
 #enddate = df_date['end_date'][0] # "20220315 23:59:59"
 # %%
+
+# Send message to Telegram bot to notify that we want to migrate data from WW fo PI from startdate to enddate
+messages = "Migrating data tags from WW to PI for data, start from {} to {}".format(startDate, endDate)
+send_message(messages, telegram_chat_id)
+
 list_error_tag = []
 list_success_tag = []
 
@@ -132,12 +169,8 @@ processed_tag_path = dirName+"/list_success_tag.csv"
 if os.path.exists(processed_tag_path):
     os.remove(processed_tag_path)
 
-# Send tqdm progress update to telegram
-telegram_bot_token = '5287136655:AAEj6qGOblO7MmyqQ9G72XJnHXM7b3gYNTs'
-telegram_chat_id = '30724671'
-
 # Iterate through tagname rows
-with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green', token=telegram_bot_token, chat_id=telegram_chat_id) as t_tag:
+with tqdm_telegram.tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green', token=telegram_bot_token, chat_id=telegram_chat_id) as t_tag:
     for index_tag, row_tag in t_tag:
 
         tagname = row_tag['Name']
@@ -153,7 +186,7 @@ with tqdm(df_conf.iterrows(), total=df_conf.shape[0], ascii =" #", colour='green
         logging.basicConfig(force=True, filename=filename, filemode='w', level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 
         #with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow', token=telegram_bot_token, chat_id=telegram_chat_id) as t_datetime:
-        with tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow') as t_datetime:
+        with tqdm.tqdm(df_date.iterrows(), total=df_date.shape[0], ascii=" *", colour='yellow') as t_datetime:
             for index, row in t_datetime:
                 # Create start date, and end date for data training
                 startdate = row['start_date']
